@@ -192,10 +192,14 @@ get_server_info() {
     echo "Enter the details from your paqet server (run 'paqet-ctl info' on server)"
     echo ""
     
-    read -p "Server IP address: " SERVER_IP
-    read -p "Server port [9999]: " SERVER_PORT
+    # Use /dev/tty to read input even when script is piped
+    echo -n "Server IP address: "
+    read SERVER_IP < /dev/tty
+    echo -n "Server port [9999]: "
+    read SERVER_PORT < /dev/tty
     SERVER_PORT="${SERVER_PORT:-9999}"
-    read -p "Secret key: " SECRET_KEY
+    echo -n "Secret key: "
+    read SECRET_KEY < /dev/tty
     
     if [[ -z "$SERVER_IP" || -z "$SECRET_KEY" ]]; then
         log_error "Server IP and secret key are required"
@@ -388,7 +392,54 @@ print_completion_message() {
     echo "     System Preferences → Network → Advanced → Proxies → SOCKS Proxy"
     echo "     Server: 127.0.0.1  Port: 1080"
     echo ""
+    echo -e "${CYAN}═══════════════════════════════════════════════════════════════════════════════${NC}"
+    echo -e "${YELLOW}                             UNINSTALL${NC}"
+    echo -e "${CYAN}═══════════════════════════════════════════════════════════════════════════════${NC}"
+    echo ""
+    echo "  To completely remove paqet client:"
+    echo -e "     ${BLUE}curl -sL https://raw.githubusercontent.com/HeidariMilad/paqet-installer/main/client/install-macos.sh | sudo bash -s -- --uninstall${NC}"
+    echo ""
     echo -e "  Files installed to: ${INSTALL_DIR}"
+    echo ""
+}
+
+#-------------------------------------------------------------------------------
+# Uninstall Function
+#-------------------------------------------------------------------------------
+
+uninstall_paqet() {
+    print_banner
+    
+    echo -e "${YELLOW}Uninstalling paqet client...${NC}"
+    echo ""
+    
+    # Get actual user's home
+    ACTUAL_USER="${SUDO_USER:-$USER}"
+    ACTUAL_HOME=$(eval echo ~$ACTUAL_USER)
+    INSTALL_DIR="$ACTUAL_HOME/.paqet"
+    
+    # Stop and remove launchd service
+    log_info "Stopping launchd service..."
+    launchctl unload /Library/LaunchDaemons/com.paqet.client.plist 2>/dev/null || true
+    rm -f /Library/LaunchDaemons/com.paqet.client.plist 2>/dev/null || true
+    log_success "Launchd service removed"
+    
+    # Remove symlink
+    log_info "Removing symlinks..."
+    rm -f /usr/local/bin/paqet-client 2>/dev/null || true
+    log_success "Symlinks removed"
+    
+    # Remove installation directory
+    log_info "Removing installation directory..."
+    if [[ -d "$INSTALL_DIR" ]]; then
+        rm -rf "$INSTALL_DIR"
+        log_success "Installation directory removed: $INSTALL_DIR"
+    else
+        log_warn "Installation directory not found: $INSTALL_DIR"
+    fi
+    
+    echo ""
+    echo -e "${GREEN}✅ Paqet client has been completely uninstalled.${NC}"
     echo ""
 }
 
@@ -397,6 +448,14 @@ print_completion_message() {
 #-------------------------------------------------------------------------------
 
 main() {
+    # Check for uninstall flag
+    if [[ "$1" == "--uninstall" || "$1" == "-u" ]]; then
+        check_root
+        check_macos
+        uninstall_paqet
+        exit 0
+    fi
+    
     print_banner
     
     check_root
