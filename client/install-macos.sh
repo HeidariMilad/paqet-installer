@@ -131,13 +131,16 @@ detect_gateway_mac() {
     ping -c 1 -W 1 "$GATEWAY_IP" > /dev/null 2>&1 || true
     
     # Get gateway MAC from ARP table
-    GATEWAY_MAC=$(arp -n "$GATEWAY_IP" 2>/dev/null | grep -v Address | awk '{print $4}')
+    RAW_MAC=$(arp -n "$GATEWAY_IP" 2>/dev/null | grep -v Address | awk '{print $4}')
     
-    if [[ -z "$GATEWAY_MAC" || "$GATEWAY_MAC" == "(incomplete)" ]]; then
+    if [[ -z "$RAW_MAC" || "$RAW_MAC" == "(incomplete)" ]]; then
         log_error "Could not detect gateway MAC address"
         log_error "Please run: ping $GATEWAY_IP && arp -n $GATEWAY_IP"
         exit 1
     fi
+    
+    # Format MAC address with leading zeros (e.g., ec:8:6b:87:c7:a8 -> ec:08:6b:87:c7:a8)
+    GATEWAY_MAC=$(echo "$RAW_MAC" | awk -F: '{printf "%02x:%02x:%02x:%02x:%02x:%02x", "0x"$1, "0x"$2, "0x"$3, "0x"$4, "0x"$5, "0x"$6}')
     
     log_success "Gateway MAC: $GATEWAY_MAC"
 }
