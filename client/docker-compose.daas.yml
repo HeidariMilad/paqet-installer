@@ -1,0 +1,61 @@
+#===============================================================================
+# PAQET MIDDLE VPS — DaaS Edition (Docker Compose)
+#
+# Traffic chain:
+#   Your Mac/Phone (Shadowrocket) → This VPS (VLESS Reality) → Server VPS (paqet)
+#
+# INSTRUCTIONS:
+#   1. Change the 3 values marked ← CHANGE THIS below
+#   2. Paste this file into your DaaS provider
+#   3. After startup, get your VLESS config:
+#      docker exec paqet-middle cat /opt/data/user-config.txt
+#   4. Import the VLESS URL into Shadowrocket / v2rayNG
+#
+# USER MANAGEMENT:
+#   docker exec paqet-middle bash /opt/data/manage-users.sh add <username>
+#   docker exec paqet-middle bash /opt/data/manage-users.sh list
+#   docker exec paqet-middle bash /opt/data/manage-users.sh show
+#
+# REQUIREMENTS:
+#   - Host networking (network_mode: host)
+#   - Privileged mode or NET_ADMIN + NET_RAW capabilities
+#===============================================================================
+
+services:
+  paqet-middle:
+    image: ubuntu:22.04
+    container_name: paqet-middle
+    restart: unless-stopped
+    network_mode: host
+    privileged: true
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    environment:
+      # ═══════════════════════════════════════════════════════════════════
+      #  REQUIRED — Get these from your paqet server (paqet-ctl info)
+      # ═══════════════════════════════════════════════════════════════════
+      - SERVER_IP=CHANGE_ME              # ← CHANGE THIS: paqet server IP
+      - SERVER_PORT=9999                 # ← CHANGE THIS: paqet server port
+      - SECRET_KEY=CHANGE_ME             # ← CHANGE THIS: paqet secret key
+      # ═══════════════════════════════════════════════════════════════════
+      #  Optional — VLESS Reality settings (defaults work fine)
+      # ═══════════════════════════════════════════════════════════════════
+      - REALITY_PORT=443
+      - REALITY_SNI=www.google.com
+      - REALITY_TRANSPORT=tcp
+      - INITIAL_USER=default
+      - PAQET_VERSION=v1.0.0-alpha.14
+    volumes:
+      - paqet-data:/opt/data
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - apt-get update -qq && apt-get install -y -qq curl > /dev/null 2>&1 && curl -sL https://raw.githubusercontent.com/HeidariMilad/paqet-installer/main/client/docker/daas-entrypoint.sh -o /tmp/start.sh && bash /tmp/start.sh
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
+volumes:
+  paqet-data:

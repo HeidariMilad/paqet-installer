@@ -1,0 +1,34 @@
+FROM ubuntu:22.04
+
+# Avoid interactive prompts during installation
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install dependencies
+RUN apt-get update && apt-get install -y \
+    libpcap-dev \
+    ca-certificates \
+    curl \
+    iproute2 \
+    iptables \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create app directory
+WORKDIR /app
+
+# Build args
+ARG PAQET_VERSION=v1.0.0-alpha.14
+ARG PAQET_ARCH=linux-amd64
+
+# Download paqet binary
+RUN curl -sL "https://github.com/hanselime/paqet/releases/download/${PAQET_VERSION}/paqet-${PAQET_ARCH}-${PAQET_VERSION}.tar.gz" -o paqet.tar.gz \
+    && tar -xzf paqet.tar.gz \
+    && rm paqet.tar.gz \
+    && BINARY_NAME=$(ls paqet* 2>/dev/null | head -n1) \
+    && if [ -n "$BINARY_NAME" ] && [ "$BINARY_NAME" != "paqet" ]; then mv "$BINARY_NAME" paqet; fi \
+    && chmod +x /app/paqet
+
+# Copy entrypoint
+COPY entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
+ENTRYPOINT ["/app/entrypoint.sh"]

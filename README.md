@@ -139,6 +139,74 @@ Or download `install-windows.ps1` and run it as Administrator.
 
 ---
 
+## Docker Middle VPS — paqet + VLESS Reality
+
+Run a **middle VPS** that combines paqet client with VLESS Reality (sing-box) in a single Docker Compose stack.
+
+**Traffic chain:**
+```
+Your Mac/Phone (Shadowrocket) → Middle VPS (VLESS Reality) → Server VPS (paqet)
+```
+
+### Option A: DaaS — Paste a Single docker-compose.yml
+
+For DaaS (Docker-as-a-Service) providers where you can **only paste a compose file** — no scripts, no Dockerfiles.
+
+1. Copy [`client/docker-compose.daas.yml`](client/docker-compose.daas.yml)
+2. Change the 3 required values (`SERVER_IP`, `SERVER_PORT`, `SECRET_KEY`)
+3. Paste into your DaaS provider
+
+Or download it:
+```bash
+curl -sO https://raw.githubusercontent.com/HeidariMilad/paqet-installer/main/client/docker-compose.daas.yml
+# Edit SERVER_IP, SERVER_PORT, SECRET_KEY, then:
+docker compose -f docker-compose.daas.yml up -d
+```
+
+After startup, get your VLESS config:
+```bash
+docker exec paqet-middle cat /opt/data/user-config.txt
+```
+
+**DaaS User Management:**
+
+| Command | Description |
+|---------|-------------|
+| `docker exec paqet-middle cat /opt/data/user-config.txt` | Show VLESS config URL |
+| `docker exec paqet-middle bash /opt/data/manage-users.sh add <name>` | Add a VLESS user |
+| `docker exec paqet-middle bash /opt/data/manage-users.sh list` | List all users |
+| `docker exec paqet-middle bash /opt/data/manage-users.sh show` | Show current config |
+
+### Option B: Full VPS — Interactive Installer
+
+For Linux VPS with full access (shell + Docker):
+
+```bash
+curl -sL https://raw.githubusercontent.com/HeidariMilad/paqet-installer/main/client/install-docker.sh | sudo bash
+```
+
+This will interactively prompt for all settings, install Docker if needed, and start the stack.
+
+**Management via `paqet-middle-ctl`:**
+
+| Command | Description |
+|---------|-------------|
+| `paqet-middle-ctl start / stop / restart / status` | Stack control |
+| `paqet-middle-ctl logs` | View all logs |
+| `paqet-middle-ctl reality-add-user <name>` | Add VLESS user |
+| `paqet-middle-ctl reality-show-user <name>` | Show user config & QR |
+| `paqet-middle-ctl reality-list-users` | List users |
+| `paqet-middle-ctl reality-menu` | TUI management menu |
+
+### Requirements
+
+- Docker with Compose plugin
+- **Host networking** (`network_mode: host`)
+- **Privileged containers** or `NET_ADMIN` + `NET_RAW` capabilities
+- If your provider restricts privileged mode, paqet may not work
+
+---
+
 ## What the Client Installers Do
 
 1. **Auto-detect** your network settings (interface, IP, gateway MAC)
