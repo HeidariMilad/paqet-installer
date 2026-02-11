@@ -8,6 +8,8 @@ RUN apt-get update && \
         libpcap0.8 \
         iproute2 \
         iptables \
+        iputils-ping \
+        net-tools \
         curl \
         jq \
         ca-certificates \
