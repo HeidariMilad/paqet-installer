@@ -10,7 +10,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository_owner }}/paqet-middle
+  IMAGE_NAME: heidarimilad/paqet-middle
 
 jobs:
   build-and-push:
