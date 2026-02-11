@@ -274,8 +274,8 @@ USERCFG
         log_success "VLESS WebSocket config generated"
 
     else
-        # ── REALITY MODE ──
-        log_info "Generating VLESS Reality config..."
+        # ── REALITY MODE (tcp or grpc) ──
+        log_info "Generating VLESS Reality config ($REALITY_TRANSPORT)..."
 
         KEYPAIR=$("$SINGBOX_BIN" generate reality-keypair)
         PRIVATE_KEY=$(echo "$KEYPAIR" | grep -i "PrivateKey" | awk '{print $NF}')
@@ -285,6 +285,17 @@ USERCFG
         echo "$PRIVATE_KEY" > "$DATA_DIR/private_key"
         echo "$SHORT_ID" > "$DATA_DIR/short_id"
 
+        # Build transport block and flow field based on transport type
+        if [[ "$REALITY_TRANSPORT" == "grpc" ]]; then
+            TRANSPORT_BLOCK='"transport": { "type": "grpc", "service_name": "grpc" },'
+            FLOW_FIELD=""
+            VLESS_URL="vless://${UUID}@${CONNECT_ADDR}:${CONNECT_PORT}?encryption=none&security=reality&sni=${REALITY_SNI}&fp=chrome&pbk=${PUBLIC_KEY}&sid=${SHORT_ID}&type=grpc&serviceName=grpc#paqet-middle"
+        else
+            TRANSPORT_BLOCK=""
+            FLOW_FIELD='"flow": "xtls-rprx-vision",'
+            VLESS_URL="vless://${UUID}@${CONNECT_ADDR}:${CONNECT_PORT}?encryption=none&flow=xtls-rprx-vision&security=reality&sni=${REALITY_SNI}&fp=chrome&pbk=${PUBLIC_KEY}&sid=${SHORT_ID}&type=tcp&headerType=none#paqet-middle"
+        fi
+
         cat > "$DATA_DIR/sing-box-config.json" << SINGCFG
 {
   "log": { "level": "info", "timestamp": true },
@@ -293,7 +304,8 @@ USERCFG
     "tag": "vless-in",
     "listen": "::",
     "listen_port": ${REALITY_PORT},
-    "users": [{ "uuid": "${UUID}", "flow": "xtls-rprx-vision", "name": "${INITIAL_USER}" }],
+    "users": [{ "uuid": "${UUID}", ${FLOW_FIELD} "name": "${INITIAL_USER}" }],
+    ${TRANSPORT_BLOCK}
     "tls": {
       "enabled": true,
       "server_name": "${REALITY_SNI}",
@@ -313,8 +325,6 @@ USERCFG
 }
 SINGCFG
 
-        VLESS_URL="vless://${UUID}@${CONNECT_ADDR}:${CONNECT_PORT}?encryption=none&flow=xtls-rprx-vision&security=reality&sni=${REALITY_SNI}&fp=chrome&pbk=${PUBLIC_KEY}&sid=${SHORT_ID}&type=tcp&headerType=none#paqet-middle"
-
         cat > "$DATA_DIR/user-config.txt" << USERCFG
 
 ╔═══════════════════════════════════════════════════════════════════════════════╗
@@ -333,12 +343,11 @@ SINGCFG
     Address:     ${CONNECT_ADDR}
     Port:        ${CONNECT_PORT}
     UUID:        ${UUID}
-    Flow:        xtls-rprx-vision
     Security:    reality
     SNI:         ${REALITY_SNI}
     Public Key:  ${PUBLIC_KEY}
     Short ID:    ${SHORT_ID}
-    Transport:   tcp
+    Transport:   ${REALITY_TRANSPORT}
     Fingerprint: chrome
 
   Traffic Chain:

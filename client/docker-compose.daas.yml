@@ -5,16 +5,19 @@
 #   Your Device (Shadowrocket) → This VPS (VLESS) → Server VPS (paqet)
 #
 # INSTRUCTIONS:
-#   1. Change SERVER_IP, SERVER_PORT, SECRET_KEY, DAAS_DOMAIN below
-#   2. Paste this file into your DaaS provider
-#   3. After startup, check container logs for your VLESS config
+#   1. Clone the repo or copy Dockerfile.middle + client/docker/daas-entrypoint.sh
+#   2. Change SERVER_IP, SERVER_PORT, SECRET_KEY below
+#   3. Run: docker compose -f client/docker-compose.daas.yml up -d --build
+#   4. Check container logs for your VLESS config
 #
-# Uses pre-built image — no apt-get, no downloads, instant startup!
+# Single container runs paqet + sing-box — no external images needed!
 #===============================================================================
 
 services:
   paqet-middle:
-    image: ghcr.io/heidarimilad/paqet-middle:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.middle
     container_name: paqet-middle
     restart: unless-stopped
     privileged: true
@@ -30,15 +33,15 @@ services:
       - SERVER_IP=CHANGE_ME                        # ← Your paqet server IP
       - SERVER_PORT=9999                           # ← Your paqet server port
       - SECRET_KEY=CHANGE_ME                       # ← Your paqet secret key
-      - DAAS_DOMAIN=CHANGE_ME                      # ← Your DaaS domain (e.g. xxx.darkube.app)
       # ═══════════════════════════════════════════════════════════════════
       #  Optional — defaults work fine
       # ═══════════════════════════════════════════════════════════════════
-      - REALITY_TRANSPORT=tcp                      # tcp (Reality) or ws (WebSocket)
+      - REALITY_TRANSPORT=tcp                      # tcp, grpc, or ws
       - REALITY_PORT=443
-      - DAAS_PORT=443                              # External port of your domain
       - REALITY_SNI=www.google.com
       - INITIAL_USER=default
+      - DAAS_DOMAIN=                               # Your DaaS domain (e.g. xxx.darkube.app)
+      - DAAS_PORT=443                              # External port of your domain
       - PAQET_VERSION=v1.0.0-alpha.14
     volumes:
       - paqet-data:/opt/data
