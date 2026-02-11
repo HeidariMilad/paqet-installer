@@ -122,13 +122,36 @@ INTERFACE=$(ip route | grep default | head -1 | awk '{print $5}')
 [[ -z "$INTERFACE" ]] && INTERFACE=$(ip -o link show | awk -F': ' '{print $2}' | grep -v lo | head -1)
 LOCAL_IP=$(ip -4 addr show "$INTERFACE" | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | head -1)
 GATEWAY_IP=$(ip route | grep default | head -1 | awk '{print $3}')
-ping -c 1 -W 1 "$GATEWAY_IP" > /dev/null 2>&1 || true
-GATEWAY_MAC=$(ip neigh show "$GATEWAY_IP" 2>/dev/null | awk '{print $5}' | head -1)
-[[ -z "$GATEWAY_MAC" || "$GATEWAY_MAC" == "FAILED" ]] && \
-    GATEWAY_MAC=$(arp -n "$GATEWAY_IP" 2>/dev/null | grep -v Address | awk '{print $3}' | head -1)
+
+# Robust gateway MAC detection with retries
+GATEWAY_MAC=""
+for attempt in 1 2 3 4 5; do
+    ping -c 3 -W 1 "$GATEWAY_IP" > /dev/null 2>&1 || true
+    sleep 1
+    GATEWAY_MAC=$(ip neigh show "$GATEWAY_IP" 2>/dev/null | grep -v FAILED | awk '{print $5}' | grep -iE '^([0-9a-f]{2}:){5}[0-9a-f]{2}$' | head -1)
+    [[ -n "$GATEWAY_MAC" ]] && break
+    GATEWAY_MAC=$(arp -n "$GATEWAY_IP" 2>/dev/null | grep -v Address | awk '{print $3}' | grep -iE '^([0-9a-f]{2}:){5}[0-9a-f]{2}$' | head -1)
+    [[ -n "$GATEWAY_MAC" ]] && break
+    GATEWAY_MAC=$(grep "$GATEWAY_IP " /proc/net/arp 2>/dev/null | awk '{print $4}' | grep -v 00:00:00:00:00:00 | head -1)
+    [[ -n "$GATEWAY_MAC" ]] && break
+    log_warn "MAC attempt $attempt/5 failed, retrying..."
+done
+# Fallback: any neighbor MAC
+if [[ -z "$GATEWAY_MAC" ]]; then
+    GATEWAY_MAC=$(ip neigh show 2>/dev/null | grep -v FAILED | awk '{print $5}' | grep -iE '^([0-9a-f]{2}:){5}[0-9a-f]{2}$' | head -1)
+fi
+if [[ -z "$GATEWAY_MAC" ]]; then
+    GATEWAY_MAC=$(cat /proc/net/arp 2>/dev/null | grep -v 'HW address' | grep -v '00:00:00:00:00:00' | awk '{print $4}' | head -1)
+fi
 
 if [[ -z "$INTERFACE" || -z "$LOCAL_IP" || -z "$GATEWAY_MAC" ]]; then
     log_error "Network detection failed: iface=$INTERFACE ip=$LOCAL_IP gwmac=$GATEWAY_MAC"
+    log_error "Debug - ip neigh:"
+    ip neigh show 2>&1 || true
+    log_error "Debug - /proc/net/arp:"
+    cat /proc/net/arp 2>&1 || true
+    log_error "Sleeping 5 min (check logs then restart)"
+    sleep 300
     exit 1
 fi
 log_success "Network: iface=$INTERFACE ip=$LOCAL_IP gw=$GATEWAY_MAC"
