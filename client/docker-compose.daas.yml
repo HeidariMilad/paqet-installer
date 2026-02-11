@@ -2,23 +2,20 @@
 # PAQET MIDDLE VPS — DaaS Edition (Docker Compose)
 #
 # Traffic chain:
-#   Your Mac/Phone (Shadowrocket) → This VPS (VLESS Reality) → Server VPS (paqet)
+#   Your Mac/Phone (Shadowrocket) → This VPS (VLESS WS) → Server VPS (paqet)
 #
 # INSTRUCTIONS:
-#   1. Change the 3 values marked ← CHANGE THIS below
-#   2. Paste this file into your DaaS provider
-#   3. After startup, get your VLESS config:
+#   1. Change SERVER_IP, SERVER_PORT, SECRET_KEY below
+#   2. Change DAAS_DOMAIN to your DaaS domain (e.g. xxxx.hsvc.ir)
+#   3. Paste this file into your DaaS provider
+#   4. After startup, get your VLESS config:
 #      docker exec paqet-middle cat /opt/data/user-config.txt
-#   4. Import the VLESS URL into Shadowrocket / v2rayNG
+#      OR check the container logs
 #
 # USER MANAGEMENT:
 #   docker exec paqet-middle bash /opt/data/manage-users.sh add <username>
 #   docker exec paqet-middle bash /opt/data/manage-users.sh list
 #   docker exec paqet-middle bash /opt/data/manage-users.sh show
-#
-# REQUIREMENTS:
-#   - Host networking (network_mode: host)
-#   - Privileged mode or NET_ADMIN + NET_RAW capabilities
 #===============================================================================
 
 services:
@@ -31,20 +28,23 @@ services:
       - NET_ADMIN
       - NET_RAW
     ports:
-      - "8443:8443"             # VLESS Reality port (change if you changed REALITY_PORT)
+      - "8080:8080"               # Internal VLESS WS port (map this in DaaS)
     environment:
       # ═══════════════════════════════════════════════════════════════════
-      #  REQUIRED — Get these from your paqet server (paqet-ctl info)
+      #  REQUIRED — Change these
       # ═══════════════════════════════════════════════════════════════════
-      - SERVER_IP=CHANGE_ME              # ← CHANGE THIS: paqet server IP
-      - SERVER_PORT=9999                 # ← CHANGE THIS: paqet server port
-      - SECRET_KEY=CHANGE_ME             # ← CHANGE THIS: paqet secret key
+      - SERVER_IP=CHANGE_ME              # ← Your paqet server IP
+      - SERVER_PORT=9999                 # ← Your paqet server port
+      - SECRET_KEY=CHANGE_ME             # ← Your paqet secret key
+      - DAAS_DOMAIN=CHANGE_ME            # ← Your DaaS domain (e.g. xxxx.hsvc.ir)
       # ═══════════════════════════════════════════════════════════════════
-      #  Optional — VLESS Reality settings (defaults work fine)
+      #  Transport — WebSocket mode (works behind DaaS proxy)
       # ═══════════════════════════════════════════════════════════════════
-      - REALITY_PORT=8443
+      - REALITY_TRANSPORT=ws
+      - REALITY_PORT=8080
+      - DAAS_PORT=443                    # External HTTPS port of your DaaS domain
+      - WS_PATH=/vless-ws
       - REALITY_SNI=www.google.com
-      - REALITY_TRANSPORT=tcp
       - INITIAL_USER=default
       - PAQET_VERSION=v1.0.0-alpha.14
     volumes:
