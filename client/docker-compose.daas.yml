@@ -2,25 +2,19 @@
 # PAQET MIDDLE VPS — DaaS Edition (Docker Compose)
 #
 # Traffic chain:
-#   Your Mac/Phone (Shadowrocket) → This VPS (VLESS WS) → Server VPS (paqet)
+#   Your Device (Shadowrocket) → This VPS (VLESS) → Server VPS (paqet)
 #
 # INSTRUCTIONS:
-#   1. Change SERVER_IP, SERVER_PORT, SECRET_KEY below
-#   2. Change DAAS_DOMAIN to your DaaS domain (e.g. xxxx.hsvc.ir)
-#   3. Paste this file into your DaaS provider
-#   4. After startup, get your VLESS config:
-#      docker exec paqet-middle cat /opt/data/user-config.txt
-#      OR check the container logs
+#   1. Change SERVER_IP, SERVER_PORT, SECRET_KEY, DAAS_DOMAIN below
+#   2. Paste this file into your DaaS provider
+#   3. After startup, check container logs for your VLESS config
 #
-# USER MANAGEMENT:
-#   docker exec paqet-middle bash /opt/data/manage-users.sh add <username>
-#   docker exec paqet-middle bash /opt/data/manage-users.sh list
-#   docker exec paqet-middle bash /opt/data/manage-users.sh show
+# Uses pre-built image — no apt-get, no downloads, instant startup!
 #===============================================================================
 
 services:
   paqet-middle:
-    image: debian:bookworm-slim
+    image: ghcr.io/heidarimilad/paqet-middle:latest
     container_name: paqet-middle
     restart: unless-stopped
     privileged: true
@@ -28,30 +22,26 @@ services:
       - NET_ADMIN
       - NET_RAW
     ports:
-      - "8080:8080"               # Internal VLESS WS port (map this in DaaS)
+      - "443:443"
     environment:
       # ═══════════════════════════════════════════════════════════════════
       #  REQUIRED — Change these
       # ═══════════════════════════════════════════════════════════════════
-      - SERVER_IP=CHANGE_ME              # ← Your paqet server IP
-      - SERVER_PORT=9999                 # ← Your paqet server port
-      - SECRET_KEY=CHANGE_ME             # ← Your paqet secret key
-      - DAAS_DOMAIN=CHANGE_ME            # ← Your DaaS domain (e.g. xxxx.hsvc.ir)
+      - SERVER_IP=CHANGE_ME                        # ← Your paqet server IP
+      - SERVER_PORT=9999                           # ← Your paqet server port
+      - SECRET_KEY=CHANGE_ME                       # ← Your paqet secret key
+      - DAAS_DOMAIN=CHANGE_ME                      # ← Your DaaS domain (e.g. xxx.darkube.app)
       # ═══════════════════════════════════════════════════════════════════
-      #  Transport — WebSocket mode (works behind DaaS proxy)
+      #  Optional — defaults work fine
       # ═══════════════════════════════════════════════════════════════════
-      - REALITY_TRANSPORT=ws
-      - REALITY_PORT=8080
-      - DAAS_PORT=443                    # External HTTPS port of your DaaS domain
-      - WS_PATH=/vless-ws
+      - REALITY_TRANSPORT=tcp                      # tcp (Reality) or ws (WebSocket)
+      - REALITY_PORT=443
+      - DAAS_PORT=443                              # External port of your domain
       - REALITY_SNI=www.google.com
       - INITIAL_USER=default
       - PAQET_VERSION=v1.0.0-alpha.14
     volumes:
       - paqet-data:/opt/data
-    entrypoint: ["/bin/bash", "-c"]
-    command:
-      - apt-get update -qq && apt-get install -y -qq curl > /dev/null 2>&1 && curl -sL https://raw.githubusercontent.com/HeidariMilad/paqet-installer/main/client/docker/daas-entrypoint.sh -o /tmp/start.sh && bash /tmp/start.sh
     logging:
       driver: json-file
       options:

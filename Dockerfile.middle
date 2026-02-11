@@ -1,0 +1,41 @@
+FROM debian:bookworm-slim
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install runtime dependencies only (minimal)
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        libpcap0.8 \
+        iproute2 \
+        iptables \
+        curl \
+        jq \
+        ca-certificates \
+        procps \
+    && rm -rf /var/lib/apt/lists/*
+
+# Download paqet binary
+ARG PAQET_VERSION=v1.0.0-alpha.14
+ARG TARGETARCH=amd64
+RUN PAQET_ARCH="linux-${TARGETARCH}" && \
+    curl -sL "https://github.com/hanselime/paqet/releases/download/${PAQET_VERSION}/paqet-${PAQET_ARCH}-${PAQET_VERSION}.tar.gz" -o /tmp/paqet.tar.gz && \
+    tar -xzf /tmp/paqet.tar.gz -C /tmp/ && \
+    BIN=$(ls /tmp/paqet* 2>/dev/null | grep -v ".tar.gz" | head -1) && \
+    mv "$BIN" /usr/local/bin/paqet && \
+    chmod +x /usr/local/bin/paqet && \
+    rm -f /tmp/paqet.tar.gz
+
+# Download sing-box binary
+ARG SB_VERSION=1.11.3
+RUN curl -sL "https://github.com/SagerNet/sing-box/releases/download/v${SB_VERSION}/sing-box-${SB_VERSION}-linux-${TARGETARCH}.tar.gz" -o /tmp/singbox.tar.gz && \
+    tar -xzf /tmp/singbox.tar.gz -C /tmp/ && \
+    mv /tmp/sing-box-*/sing-box /usr/local/bin/sing-box && \
+    chmod +x /usr/local/bin/sing-box && \
+    rm -rf /tmp/singbox.tar.gz /tmp/sing-box-*
+
+WORKDIR /opt/data
+
+COPY client/docker/daas-entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/bin/bash", "/entrypoint.sh"]
