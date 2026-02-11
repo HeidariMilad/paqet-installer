@@ -298,7 +298,7 @@ create_dockerfile() {
     log_info "Creating Dockerfile..."
     
     cat > "$INSTALL_DIR/Dockerfile" << 'DOCKERFILE'
-FROM ubuntu:22.04
+FROM debian:bookworm-slim
 
 # Avoid interactive prompts during installation
 ENV DEBIAN_FRONTEND=noninteractive

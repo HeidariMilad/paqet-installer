@@ -23,7 +23,7 @@
 
 services:
   paqet-middle:
-    image: ubuntu:22.04
+    image: debian:bookworm-slim
     container_name: paqet-middle
     restart: unless-stopped
     network_mode: host

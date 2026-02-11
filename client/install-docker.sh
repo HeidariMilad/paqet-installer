@@ -299,7 +299,7 @@ create_dockerfile() {
     log_info "Creating Dockerfile for paqet client..."
 
     cat > "$INSTALL_DIR/Dockerfile.paqet" << 'DOCKERFILE'
-FROM ubuntu:22.04
+FROM debian:bookworm-slim
 
 ENV DEBIAN_FRONTEND=noninteractive
 
