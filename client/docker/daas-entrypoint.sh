@@ -37,7 +37,7 @@ log_error()   { echo -e "${RED}[ERROR]${NC} $1"; }
 # ── Configuration from environment ───────────────────────────────────────────
 DATA_DIR="/opt/data"
 PAQET_VERSION="${PAQET_VERSION:-v1.0.0-alpha.14}"
-REALITY_PORT="${REALITY_PORT:-443}"
+REALITY_PORT="${REALITY_PORT:-8443}"
 REALITY_SNI="${REALITY_SNI:-www.google.com}"
 REALITY_TRANSPORT="${REALITY_TRANSPORT:-tcp}"
 INITIAL_USER="${INITIAL_USER:-default}"

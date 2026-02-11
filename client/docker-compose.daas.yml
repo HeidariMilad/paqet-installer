@@ -31,7 +31,7 @@ services:
       - NET_ADMIN
       - NET_RAW
     ports:
-      - "443:443"              # VLESS Reality port (change if you changed REALITY_PORT)
+      - "8443:8443"             # VLESS Reality port (change if you changed REALITY_PORT)
     environment:
       # ═══════════════════════════════════════════════════════════════════
       #  REQUIRED — Get these from your paqet server (paqet-ctl info)
@@ -42,7 +42,7 @@ services:
       # ═══════════════════════════════════════════════════════════════════
       #  Optional — VLESS Reality settings (defaults work fine)
       # ═══════════════════════════════════════════════════════════════════
-      - REALITY_PORT=443
+      - REALITY_PORT=8443
       - REALITY_SNI=www.google.com
       - REALITY_TRANSPORT=tcp
       - INITIAL_USER=default
