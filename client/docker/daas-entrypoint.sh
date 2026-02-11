@@ -295,9 +295,21 @@ SINGCFG
     log_success "VLESS Reality config generated"
 
     # ── Generate user config for client apps ──
-    PUBLIC_IP=$(curl -4 -s --connect-timeout 5 https://ifconfig.me 2>/dev/null || \
-                curl -4 -s --connect-timeout 5 https://api.ipify.org 2>/dev/null || \
-                echo "YOUR_VPS_IP")
+    PUBLIC_IP=$(curl -4 -s --connect-timeout 5 https://ifconfig.me 2>/dev/null || true)
+    # Validate it looks like an IP (not HTML error)
+    if ! echo "$PUBLIC_IP" | grep -qP '^\d+\.\d+\.\d+\.\d+$'; then
+        PUBLIC_IP=$(curl -4 -s --connect-timeout 5 https://api.ipify.org 2>/dev/null || true)
+    fi
+    if ! echo "$PUBLIC_IP" | grep -qP '^\d+\.\d+\.\d+\.\d+$'; then
+        PUBLIC_IP=$(curl -4 -s --connect-timeout 5 https://checkip.amazonaws.com 2>/dev/null | tr -d '[:space:]' || true)
+    fi
+    if ! echo "$PUBLIC_IP" | grep -qP '^\d+\.\d+\.\d+\.\d+$'; then
+        PUBLIC_IP=$(curl -4 -s --connect-timeout 5 https://ipv4.icanhazip.com 2>/dev/null | tr -d '[:space:]' || true)
+    fi
+    if ! echo "$PUBLIC_IP" | grep -qP '^\d+\.\d+\.\d+\.\d+$'; then
+        # Last resort: use hostname or local IP
+        PUBLIC_IP=$(hostname -I 2>/dev/null | awk '{print $1}' || echo "YOUR_VPS_IP")
+    fi
 
     VLESS_URL="vless://${UUID}@${PUBLIC_IP}:${REALITY_PORT}?encryption=none&flow=xtls-rprx-vision&security=reality&sni=${REALITY_SNI}&fp=chrome&pbk=${PUBLIC_KEY}&sid=${SHORT_ID}&type=${REALITY_TRANSPORT}&headerType=none#paqet-middle"
 
